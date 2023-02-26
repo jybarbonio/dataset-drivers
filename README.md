@@ -16,6 +16,7 @@ Provide open_directory with a folder directory of images for imageprocessor, or 
 
 # Credits #
 CAHSI LREU
+
 Dr. Yunhe Feng - Research Coordinator and Director
 
 John Barbonio - Undergrad Contributing Researcher
