@@ -2,6 +2,8 @@ import os
 import time
 import dhash
 
+from joblib import Parallel, delayed
+
 from PIL import Image, ImageFilter, ImageFile, ImageOps
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
@@ -18,7 +20,7 @@ To-Do:
     parallel computing
     
 Pipeline is currently:
-    open_directory, open_image -> quicksort -> partition -> return runtime and list
+    open_directory, opening image -> quicksort -> partition -> return runtime and list
 '''
 
 # performance timer decorator measuring from initial file parsing, to hashing and sorting 
@@ -71,6 +73,7 @@ def partition(list_hash, start, end):
 # Calculate column hash for each column, move top to bottom
 # Concatenate the two 64-bit values together to get the final 128-bit hash
 def hashify(img):
+    ImageFile.LOAD_TRUNCATED_IMAGES = True      # explicit, joblib will not consider global scope arg (pre-compile?)
     img = ImageOps.grayscale(img)
     img = img.resize((9, 9))
 
@@ -89,7 +92,7 @@ def comparehash(fpath, list_hash):
     # since list is sorted, check 5 spots ahead if current index has a hash duplicate, mark for ignore/delete
     for c, h in enumerate(list_hash):
         # proximity checks the 4 hashes ahead of h for similarity
-        print(c, h)
+        # print(c, h)
         lkh = c + 1     # look aheadof index for duplicates
 
         # first conditional avoids hash list overflow, second conditional compares bit diffs
@@ -109,41 +112,34 @@ def comparehash(fpath, list_hash):
 def diffhash(hash1, hash2):
     return bin(hash1 ^ hash2).count('1')
 
-def open_image(file):
-    # import and create image
-    return Image.open(file)
-    # show the image
-    # img.show()
-
-@runtimer
-def open_directory(dir):
-    list_hashfile = []
-
-    # for count, file in enumerate(os.listdir(dir)):
-    for file in os.listdir(dir):
-        f = os.path.join(dir, file)
-        # checking if it is a file
-        if os.path.isfile(f):
-            # print(count, " " + f)
-            img = open_image(f)
-            # print(file, hashify(img))
-            # elem tuple joins a file directory and its generated hash
-            list_hashfile.append((file, hashify(img)))
-        else:
-            f = os.path.join(dir, file)
-            print("Failed to load file: ", f)
-
-    return list_hashfile
+# @runtimer
+def open_directory(dir, file):
+    f = os.path.join(dir, file)
+    # checking if it is a file, otherwise ignore
+    if os.path.isfile(f):
+        # print(count, " " + f)
+        img = Image.open(f)
+        # print(file, hashify(img))
+        # elem tuple joins a file directory and its generated hash
+        return (file, hashify(img))
 
 if __name__ == "__main__":
-    fpath = 'C:\\Users\\John\\Desktop\\AIScooter\\imagesT\\imagesT'
-    list_hashfile = open_directory(fpath)
+    dir = 'C:\\Users\\John\\Desktop\\AIScooter\\imagesM\\imagesM'
+    # list_hash = open_directory(dir)
     
-    # for hf in list_hashfile:
-        # print(hf)
-        # print(hf[0], " ", hf[1])
+    list_hash = []
+    '''
+    for file in dir:
+        list_hash.append(open_directory(file))
+    '''
 
-    dct_dups = comparehash(fpath, list_hashfile)
+    t1 = time.time()
+    list_hash = (Parallel(n_jobs = -1)(delayed(open_directory)(dir, file) for file in os.listdir(dir)))
+    t2 = time.time()
+
+    print("It took ", t2-t1, " to process the dataset in directory.")
+
+    dct_dups = comparehash(dir, list_hash)
 
     for d in dct_dups:
         print("deleted: ", d[0])
