@@ -31,7 +31,7 @@ def runtimer(func):
         return list
     return wrapper
 
-@runtimer
+# quicksort the algorithm so duplicate testing is near index
 def quicksort(list_hash, start, end):
     if start >= end:
         return
@@ -44,18 +44,18 @@ def quicksort(list_hash, start, end):
 
 # pivot subfunction for quick sort, moving list edge elems towards pivots and repeating until sorted
 def partition(list_hash, start, end):
-    pivot = list_hash[start]
+    pivot = list_hash[start][1]
     low = start + 1
     high = end
 
     while True:
-        while low <= high and list_hash[high] >= pivot:
+        while low <= high and list_hash[high][1] >= pivot[1]:
             high -= 1
-        while low <= high and list_hash[low] <= pivot:
+        while low <= high and list_hash[low][1] <= pivot[1]:
             low += 1
 
         if low <= high:
-            list_hash[low], list_hash[high] = list_hash[high], list_hash[low]
+            list_hash[low][1], list_hash[high][1] = list_hash[high][1], list_hash[low][1]
         else:
             break
 
@@ -80,6 +80,34 @@ def hashify(img):
     # print(dhash.format_hex(row, col))
     return (dhash.format_hex(row, col))
 
+# hash comparison of a sorted list, via dhash using hamming distance
+# linear search but list is sorted so only immediate neighbors are checked
+# bit difference of 1 or 2 are confidently duplicates, 4-5 creates false positives
+def comparehash(fpath, list_hash):
+    list_duplicates = []
+
+    # since list is sorted, check 5 spots ahead if current index has a hash duplicate, mark for ignore/delete
+    for c, h in enumerate(list_hash):
+        # proximity checks the 4 hashes ahead of h for similarity
+        print(c, h)
+        lkh = c + 1     # look aheadof index for duplicates
+
+        # first conditional avoids hash list overflow, second conditional compares bit diffs
+        # second conditional checks if diff bits between current hash and +1 ahead
+        #   if different bits < 2 then they're effectively duplicates, so delete
+        while(lkh < len(list_hash) 
+              and os.path.isfile(fpath + "\\" + list_hash[lkh][0]) 
+              and diffhash(int(h[1], 16), int(list_hash[lkh][1], 16)) < 2):
+            print("adding to delete list: ", list_hash[lkh][0])
+            list_duplicates.append(list_hash[lkh])
+            os.remove(fpath + "\\" + list_hash[lkh][0])
+            lkh += 1
+
+    return list_duplicates
+
+# returns the amount of bit differences, finds how many 1s there are vs the other
+def diffhash(hash1, hash2):
+    return bin(hash1 ^ hash2).count('1')
 
 def open_image(file):
     # import and create image
@@ -89,28 +117,33 @@ def open_image(file):
 
 @runtimer
 def open_directory(dir):
-    count_pass = 0
-    count_fail = 0
-    list_fail = []
-    list_hashes = []
+    list_hashfile = []
 
-    for count, file in enumerate(os.listdir(dir)):
-    # for file in os.listdir(dir):
-    
+    # for count, file in enumerate(os.listdir(dir)):
+    for file in os.listdir(dir):
+        f = os.path.join(dir, file)
         # checking if it is a file
-        if os.path.isfile((dir, file)):
+        if os.path.isfile(f):
             # print(count, " " + f)
             img = open_image(f)
-            # print(hashify(img))
-            list_hashes.append(hashify(img))
+            # print(file, hashify(img))
+            # elem tuple joins a file directory and its generated hash
+            list_hashfile.append((file, hashify(img)))
         else:
-            list_fail.append((dir, file))
             f = os.path.join(dir, file)
+            print("Failed to load file: ", f)
 
-    return list_hashes
+    return list_hashfile
 
 if __name__ == "__main__":
-    # open_image("images/images/http!++pbs.twimg.com+media+D0yx7u2U8AAJr4d.jpg")
-    imghashes = open_directory('C:\\Users\\John\\Desktop\\AIScooter\\images\\images')
-    imghashes = quicksort(imghashes, 0, len(imghashes) - 1)
-    print(imghashes)
+    fpath = 'C:\\Users\\John\\Desktop\\AIScooter\\imagesT\\imagesT'
+    list_hashfile = open_directory(fpath)
+    
+    # for hf in list_hashfile:
+        # print(hf)
+        # print(hf[0], " ", hf[1])
+
+    dct_dups = comparehash(fpath, list_hashfile)
+
+    for d in dct_dups:
+        print("deleted: ", d[0])
