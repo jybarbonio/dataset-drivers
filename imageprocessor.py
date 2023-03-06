@@ -117,7 +117,6 @@ def open_directory(dir, file):
     f = os.path.join(dir, file)
     # checking if it is a file, otherwise ignore
     if os.path.isfile(f):
-        # print(count, " " + f)
         img = Image.open(f)
         # print(file, hashify(img))
         # elem tuple joins a file directory and its generated hash
