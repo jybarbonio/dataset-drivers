@@ -45,25 +45,26 @@ def quicksort(list_hash, start, end):
     return list_hash
 
 # pivot subfunction for quick sort, moving list edge elems towards pivots and repeating until sorted
-def partition(list_hash, start, end):
-    pivot = list_hash[start][1]
-    low = start + 1
-    high = end
+# note since this compares numerical values while hash is a string, this is deprecated unless needed later
+def partition(list_h, start, end):
+    pivot = list_h[end][1]
+    i = start - 1
 
-    while True:
-        while low <= high and list_hash[high][1] >= pivot[1]:
-            high -= 1
-        while low <= high and list_hash[low][1] <= pivot[1]:
-            low += 1
-
-        if low <= high:
-            list_hash[low][1], list_hash[high][1] = list_hash[high][1], list_hash[low][1]
-        else:
-            break
-
-    list_hash[start], list_hash[high] = list_hash[high], list_hash[start]
-
-    return high
+    for j in range(start, end):
+        if list_h[j] <= pivot:
+ 
+            # If element smaller than pivot is found
+            # swap it with the greater element pointed by i
+            i = i + 1
+ 
+            # Swapping element at i with element at j
+            (list_h[i], list_h[j]) = (list_h[j], list_h[i])
+ 
+    # Swap the pivot element with the greater element specified by i
+    (list_h[i + 1], list_h[end]) = (list_h[end], list_h[i + 1])
+ 
+    # Return the position from where partition is done
+    return i + 1
 
 # For the image param, filter to grayscale
 # Downsize to 9x9 square
@@ -81,6 +82,7 @@ def hashify(img):
     row, col = dhash.dhash_row_col(img)
     
     # print(dhash.format_hex(row, col))
+    # print("TYPE:", type(dhash.format_hex(row, col)))
     return (dhash.format_hex(row, col))
 
 # hash comparison of a sorted list, via dhash using hamming distance
@@ -112,7 +114,7 @@ def comparehash(fpath, list_hash):
 def diffhash(hash1, hash2):
     return bin(hash1 ^ hash2).count('1')
 
-# @runtimer
+# given a file, hashes that file and returns the hash value
 def open_directory(dir, file):
     f = os.path.join(dir, file)
     # checking if it is a file, otherwise ignore
@@ -120,25 +122,37 @@ def open_directory(dir, file):
         img = Image.open(f)
         # print(file, hashify(img))
         # elem tuple joins a file directory and its generated hash
-        return (file, hashify(img))
+        return ([file, hashify(img)])
 
+# wrapper for open_directory to easily time function performance and keeps main method cleaner
+@runtimer
+def open_dir_wrap(dir):
+    # parallelization using as many threads as the CPU has to speed up processing
+    list_h = Parallel(n_jobs = -1)(delayed(open_directory)(dir, file) for file in os.listdir(dir))
+    # sorts the hash strings
+    list_h.sort()
+    return list_h
+
+# MAIN METHOD
 if __name__ == "__main__":
-    dir = 'C:\\Users\\John\\Desktop\\AIScooter\\imagesM\\imagesM'
-    # list_hash = open_directory(dir)
-    
+    # directory
+    # hash array
+    dir = 'C:\\Users\\John\\Desktop\\AIScooter\\imagesC\\imagesC'
     list_hash = []
-    '''
-    for file in dir:
-        list_hash.append(open_directory(file))
-    '''
 
-    t1 = time.time()
-    list_hash = (Parallel(n_jobs = -1)(delayed(open_directory)(dir, file) for file in os.listdir(dir)))
-    t2 = time.time()
+    # for all the image files in a directory, add hashes to list array
+    list_hash = open_dir_wrap(dir)
 
-    print("It took ", t2-t1, " to process the dataset in directory.")
+    # quick sorts hashes, array, the start and end indexes are provided
+    #list_hash = quicksort(list_hash, 0, len(list_hash) - 1)
+    #for l in list_hash:
+    #    print(l[1])     # print sorted hashes
 
+    # parses the sorted hashlist for neighboring hash duplicates and deletes ahead duplicates
     dct_dups = comparehash(dir, list_hash)
 
-    for d in dct_dups:
-        print("deleted: ", d[0])
+    # lists deleted duplicate images from dir
+    #for d in dct_dups:
+    #    print("deleted: ", d[0])
+
+    print("duplicates found and deleted:", len(dct_dups))
