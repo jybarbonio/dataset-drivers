@@ -103,7 +103,7 @@ def comparehash(fpath, list_hash):
         while(lkh < len(list_hash) 
               and os.path.isfile(fpath + "\\" + list_hash[lkh][0]) 
               and diffhash(int(h[1], 16), int(list_hash[lkh][1], 16)) < 2):
-            print("adding to delete list: ", list_hash[lkh][0])
+            print("adding to delete list: ", list_hash[lkh][0], "duplicate of", h)
             list_duplicates.append(list_hash[lkh])
             os.remove(fpath + "\\" + list_hash[lkh][0])
             lkh += 1
@@ -130,14 +130,17 @@ def open_dir_wrap(dir):
     # parallelization using as many threads as the CPU has to speed up processing
     list_h = Parallel(n_jobs = -1)(delayed(open_directory)(dir, file) for file in os.listdir(dir))
     # sorts the hash strings
-    list_h.sort()
+    try:
+        list_h.sort()
+    except:
+        print("list_h failed to sort. returning empty list")
     return list_h
 
 # MAIN METHOD
 if __name__ == "__main__":
     # directory
     # hash array
-    dir = 'C:\\Users\\John\\Desktop\\AIScooter\\imagesC\\imagesC'
+    dir = 'C:\\Users\\John\\Desktop\\AIScooter\\imagesT\\imagesT'
     list_hash = []
 
     # for all the image files in a directory, add hashes to list array
