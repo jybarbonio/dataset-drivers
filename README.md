@@ -1,5 +1,5 @@
-# dataset-drivers
-programs for image and json dataset processing and summarization
+# CASHI e-scooter research dataset drivers
+programs for image and json dataset processing and visual summarization for the CASHI e-scooter project.
 
 # Credits #
 CAHSI LREU
